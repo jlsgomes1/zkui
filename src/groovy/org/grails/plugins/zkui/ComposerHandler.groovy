@@ -9,6 +9,7 @@ import org.zkoss.zk.ui.UiException
 import org.zkoss.zk.ui.util.Composer
 import org.zkoss.zk.ui.util.ComposerExt
 
+
 class ComposerHandler implements GrailsApplicationAware {
     GrailsApplication grailsApplication
     Composer composer
