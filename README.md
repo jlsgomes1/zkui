@@ -3,6 +3,9 @@ ZK UI plugin,the same as the ZKGrails plugin, seamlessly integrates ZK with Grai
 
 The difference is it uses the Grails' infrastructures more, such as gsp, controllers rather than zk's zul.
 
+Updated for Grails 2.5.6 and ZK 8.6.0.1. Featuring ZkThemeManager, for dynamic switch between ZK themes, since they are in 
+lib folder (jar files for each theme).
+
 ### Getting Started
 
 #### DOCTYPE
