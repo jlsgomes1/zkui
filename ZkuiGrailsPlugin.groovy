@@ -1,3 +1,28 @@
+import java.lang.reflect.Method
+import java.lang.reflect.Modifier
+import java.util.concurrent.ConcurrentHashMap
+
+import org.codehaus.groovy.control.CompilerConfiguration
+import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
+import org.codehaus.groovy.grails.commons.ControllerArtefactHandler
+import org.codehaus.groovy.grails.commons.GrailsApplication
+import org.codehaus.groovy.grails.commons.GrailsClassUtils
+import org.codehaus.groovy.grails.commons.GrailsControllerClass
+import org.codehaus.groovy.grails.commons.GrailsDomainClass
+import org.codehaus.groovy.grails.compiler.injection.NamedArtefactTypeAstTransformation
+import org.codehaus.groovy.grails.scaffolding.DefaultGrailsTemplateGenerator
+import org.grails.plugins.zkui.scaffolding.ZkGrailsTemplateGenerator
+import org.codehaus.groovy.grails.scaffolding.view.ScaffoldingViewResolver
+import org.codehaus.groovy.grails.web.pages.FastStringWriter
+import org.codehaus.groovy.grails.web.pages.GroovyPagesTemplateRenderer
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory
+import org.springframework.context.ApplicationContext
+
+
+
+
 import org.codehaus.groovy.grails.commons.DomainClassArtefactHandler
 import org.codehaus.groovy.grails.commons.GrailsClassUtils
 import org.codehaus.groovy.grails.web.metaclass.BindDynamicMethod
@@ -19,17 +44,20 @@ import org.zkoss.zul.Messagebox
 import org.zkoss.zul.impl.InputElement
 
 class ZkuiGrailsPlugin {
+    
+    private Logger log = LoggerFactory.getLogger(getClass())
+    
     // the plugin version
-    def version = "0.5.7"
+    def version = "0.6"
     // the version or versions of Grails the plugin is designed for
-    def grailsVersion = "1.2 > *"
+    def grailsVersion = "2.5.6"
     // the other plugins this plugin depends on
-    def dependsOn = [:]
+    def dependsOn = [scaffolding:"2.1.2"]
 
     def loadAfter = ['core', 'hibernate', 'controllers']
 
     def artefacts = [
-            ComposerArtefactHandler, ViewModelArtefactHandler
+        ComposerArtefactHandler, ViewModelArtefactHandler
     ]
 
     def watchedResources = [
@@ -50,10 +78,13 @@ class ZkuiGrailsPlugin {
 
     def author = "groovyquan"
     def authorEmail = "groovyquan@gmail.com"
+    def contributors = "nashtsai, jlsgomes@uem.br, amrc"
     def title = "Grails ZK UI Plugin"
     def description = '''\
 ZK UI plugin,the same as the ZKGrails plugin, seamlessly integrates ZK with Grails' infrastructures.
-The different is it more likely to use the Grails' infrastructures such as gsp, controllers rather than zk's zul.
+The different is it more likely to use the Grails' infrastructures such as gsp, controllers rather than zk's zul. \n\
+This version uses ZK 8.6.0.1 and features ZKThemeManager, used for dynamically switch ZK Theme (iceblue, breeze, sapphire or silvetail), since they \n\
+are in lib folder as jar files.
 '''
 
     // URL to the plugin's documentation
@@ -99,7 +130,7 @@ The different is it more likely to use the Grails' infrastructures such as gsp, 
         }
 
         // adding GrailsOpenSessionInView
-        if (manager?.hasGrailsPlugin("hibernate")) {
+        if (manager?.hasGrailsPlugin("hibernate") || manager?.hasGrailsPlugin("hibernate4")) {
             def filterElement = webXml.'filter'[0]
             filterElement + {
                 'filter' {
@@ -119,6 +150,26 @@ The different is it more likely to use the Grails' infrastructures such as gsp, 
     }
 
     def doWithSpring = {
+        ScaffoldingViewResolver.clearViewCache()
+
+        scaffoldedActionMap(ConcurrentHashMap)
+
+        controllerToScaffoldedDomainClassMap(ConcurrentHashMap)
+
+        scaffoldingTemplateGenerator(DefaultGrailsTemplateGenerator, ref("classLoader")) {
+            grailsApplication = ref("grailsApplication")
+        }
+
+        jspViewResolver(ScaffoldingViewResolver) { bean ->
+            bean.lazyInit = true
+            bean.parent = 'abstractViewResolver'
+
+            templateGenerator = scaffoldingTemplateGenerator
+            scaffoldedActionMap = ref("scaffoldedActionMap")
+            scaffoldedDomains = controllerToScaffoldedDomainClassMap
+        }
+        
+        
         "webManagerInit"(org.grails.plugins.zkui.WebManagerInit)
         "composerHandler"(org.grails.plugins.zkui.ComposerHandler) { bean ->
             bean.scope = "prototype"
@@ -329,6 +380,7 @@ The different is it more likely to use the Grails' infrastructures such as gsp, 
     }
 
     def onChange = { event ->
+              
         // watching is modified and reloaded. The event contains: event.source,
         // event.application, event.manager, event.ctx, and event.plugin.
         def artefactType = null
@@ -341,7 +393,7 @@ The different is it more likely to use the Grails' infrastructures such as gsp, 
             def context = event.ctx
             if (!context) {
                 if (log.isDebugEnabled())
-                    log.debug("Application context not found. Can't reload")
+                log.debug("Application context not found. Can't reload")
                 return
             }
             def artefactClass = application.addArtefact(artefactType, event.source)
@@ -357,6 +409,110 @@ The different is it more likely to use the Grails' infrastructures such as gsp, 
         }
 
         event.manager?.getGrailsPlugin("zkui")?.doWithDynamicMethods(event.ctx)
+        
+        ScaffoldingViewResolver.clearViewCache()
+        if (event.ctx?.groovyPagesTemplateRenderer) {
+            GroovyPagesTemplateRenderer renderer = event.ctx?.groovyPagesTemplateRenderer
+            renderer.clearCache()
+        }
+    }
+    
+    private void configureScaffolding(ApplicationContext ctx, GrailsApplication application) {
+        for (controllerClass in application.controllerClasses) {
+            configureScaffoldingController(ctx, application, controllerClass)
+        }
+    }
+
+    private void configureScaffoldingController(ApplicationContext ctx, GrailsApplication application, GrailsControllerClass controllerClass) {
+
+        def scaffoldProperty = controllerClass.getPropertyValue("scaffold", Object)
+        if (!scaffoldProperty || !ctx) {
+            return
+        }
+
+        Map scaffoldedActionMap = ctx.scaffoldedActionMap
+        GrailsDomainClass domainClass = getScaffoldedDomainClass(application, controllerClass, scaffoldProperty)
+        scaffoldedActionMap[controllerClass.logicalPropertyName] = []
+        if (!domainClass) {
+            log.error "Cannot generate controller logic for scaffolded class {}. It is not a domain class!", scaffoldProperty
+            return
+        }
+
+        ZkGrailsTemplateGenerator generator = ctx.scaffoldingTemplateGenerator
+        ClassLoader parentLoader = ctx.classLoader
+
+        Map scaffoldedDomains = ctx.controllerToScaffoldedDomainClassMap
+        scaffoldedDomains[controllerClass.logicalPropertyName] = domainClass
+        String controllerSource = generateControllerSource(generator, domainClass)
+        def scaffoldedInstance = createScaffoldedInstance(parentLoader, controllerSource)
+        ctx.autowireCapableBeanFactory.autowireBeanProperties(scaffoldedInstance, AutowireCapableBeanFactory.AUTOWIRE_BY_NAME, false)
+        List actionProperties = getScaffoldedActions(scaffoldedInstance)
+
+        def metaClass = controllerClass.clazz.metaClass
+
+        for (actionProp in actionProperties) {
+            if (actionProp == null) {
+                continue
+            }
+
+            String propertyName = actionProp instanceof MetaProperty ? actionProp.name : actionProp.method
+            def mp = metaClass.getMetaProperty(propertyName)
+            scaffoldedActionMap[controllerClass.logicalPropertyName] << propertyName
+
+            if (!mp) {
+                Closure propertyValue = actionProp instanceof MetaProperty ? actionProp.getProperty(scaffoldedInstance) : actionProp
+                metaClass."${GrailsClassUtils.getGetterName(propertyName)}" = {->
+                    propertyValue.delegate = delegate
+                    propertyValue.resolveStrategy = Closure.DELEGATE_FIRST
+                    propertyValue
+                }
+            }
+            controllerClass.registerMapping(propertyName)
+        }
+    }
+
+    private GrailsDomainClass getScaffoldedDomainClass(application, GrailsControllerClass controllerClass, scaffoldProperty) {
+
+        if (!scaffoldProperty) {
+            return null
+        }
+
+        if (scaffoldProperty instanceof Class) {
+            return application.getDomainClass(scaffoldProperty.name)
+        }
+
+        scaffoldProperty = controllerClass.packageName ? "${controllerClass.packageName}.${controllerClass.name}" : controllerClass.name
+        return application.getDomainClass(scaffoldProperty)
+    }
+
+    private createScaffoldedInstance(ClassLoader parentLoader, String controllerSource) {
+        def configuration = new CompilerConfiguration()
+        configuration.addCompilationCustomizers(new ASTTransformationCustomizer(new NamedArtefactTypeAstTransformation(ControllerArtefactHandler.TYPE)))
+
+        return new GroovyClassLoader(parentLoader, configuration).parseClass(controllerSource).newInstance()
+    }
+
+    private List getScaffoldedActions(scaffoldedInstance) {
+        def actionProperties = scaffoldedInstance.metaClass.properties.findAll { MetaProperty mp ->
+            try {
+                return mp.getProperty(scaffoldedInstance) instanceof Closure
+            }
+            catch (Exception ignored) {}
+        }
+
+        def methodActions = scaffoldedInstance.getClass().declaredMethods.findAll { Method m ->
+            def modifiers = m.modifiers
+            Modifier.isPublic(modifiers) && !Modifier.isAbstract(modifiers) && !Modifier.isStatic(modifiers) && !Modifier.isSynthetic(modifiers)
+        }.collect { Method m -> scaffoldedInstance.&"$m.name"}
+        actionProperties.addAll methodActions
+        return actionProperties
+    }
+
+    private String generateControllerSource(ZkGrailsTemplateGenerator generator, GrailsDomainClass domainClass) {
+        def sw = new FastStringWriter()
+        log.info "Generating controller logic for scaffolding domain: {}", domainClass.fullName
+        generator.generateController domainClass, sw
+        return sw.toString()
     }
 
     def onConfigChange = { event ->
