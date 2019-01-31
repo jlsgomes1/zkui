@@ -4,8 +4,8 @@
   <title>Grails ZK UI Plugin</title>
   <description>ZK UI plugin,the same as the ZKGrails plugin, seamlessly integrates ZK with Grails' infrastructures.
 The different is it more likely to use the Grails' infrastructures such as gsp, controllers rather than zk's zul. 
-This version uses ZK 8.6.0.1 and features ZKThemeManager, used for dynamically switch ZK Theme (iceblue, breeze, sapphire or silvetail), since they 
-are in lib folder as jar files.
+This version uses ZK 8.6.0.1 and features ZKThemeManager, used for dynamically switch ZK Theme (atlantic, iceblue, breeze, 
+sapphire or silvetail), since they are in lib folder as jar files.
 </description>
   <documentation>http://grails.org/plugin/zkui</documentation>
   <type>ZkuiGrailsPlugin</type>
