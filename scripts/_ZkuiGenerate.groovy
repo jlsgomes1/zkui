@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2004-2005 the original author or authors.
  *
@@ -25,6 +26,7 @@ import grails.util.GrailsNameUtils
  */
 
 includeTargets << grailsScript("_GrailsBootstrap")
+includeTargets << grailsScript("_GrailsCreateArtifacts")
 
 generateForName = null
 generateViews = true
@@ -32,25 +34,24 @@ generateController = true
 
 target(generateForOne: "Generates controllers and views for only one domain class.") {
     depends(loadApp)
-
-    def name = generateForName
-    name = name.indexOf('.') > -1 ? name : GrailsNameUtils.getClassNameRepresentation(name)
-    def domainClass = grailsApp.getDomainClass(name)
-
+    
+        String name = generateForName
+	name = name.indexOf('.') > 0 ? name : GrailsNameUtils.getClassNameRepresentation(name)
+	def domainClass = grailsApp.getDomainClass(name)
+        
     if (!domainClass) {
-        println "Domain class not found in grails-app/domain, trying hibernate mapped classes..."
-        bootstrap()
-        domainClass = grailsApp.getDomainClass(name)
-    }
+		grailsConsole.updateStatus "Domain class not found in grails-app/domain, trying hibernate mapped classes..."
+		bootstrap()
+		domainClass = grailsApp.getDomainClass(name)
+	}
 
-    if (domainClass) {
-        generateForDomainClass(domainClass)
-        event("StatusFinal", ["Finished generation for domain class ${domainClass.fullName}"])
-    }
-    else {
-        event("StatusFinal", ["No domain class found for name ${name}. Please try again and enter a valid domain class name"])
-        exit(1)
-    }
+	if (!domainClass) {
+		event("StatusFinal", ["No domain class found for name ${name}. Please try again and enter a valid domain class name"])
+		return
+	}
+
+	generateForDomainClass(domainClass)
+	event("StatusFinal", ["Finished generation for domain class ${domainClass.fullName}"])
 }
 
 target(uberGenerate: "Generates controllers and views for all domain classes.") {
@@ -64,20 +65,24 @@ target(uberGenerate: "Generates controllers and views for all domain classes.") 
         domainClasses = grailsApp.domainClasses
     }
 
-    if (domainClasses) {
-        domainClasses.each { domainClass -> generateForDomainClass(domainClass) }
-        event("StatusFinal", ["Finished generation for domain classes"])
-    }
-    else {
+    if (!domainClasses) {
         event("StatusFinal", ["No domain classes found"])
+        return
     }
+
+    domainClasses.each { domainClass -> generateForDomainClass(domainClass) }
+    event("StatusFinal", ["Finished generation for domain classes"])
 }
 
-def generateForDomainClass(domainClass) {
-    def templateGenerator = classLoader.loadClass("org.grails.plugins.zkui.scaffolding.ZkGrailsTemplateGenerator").newInstance([classLoader] as Object[])
+void generateForDomainClass(domainClass) {
+    def ZkGrailsTemplateGenerator = classLoader.loadClass('org.grails.plugins.zkui.scaffolding.ZkGrailsTemplateGenerator')
+    def templateGenerator = ZkGrailsTemplateGenerator.newInstance(classLoader)
     templateGenerator.grailsApplication = grailsApp
     templateGenerator.pluginManager = pluginManager
+    
+    
     templateGenerator.zkuiPluginDir = zkuiPluginDir
+    
     if (generateViews) {
         event("StatusUpdate", ["Generating views for domain class ${domainClass.fullName}"])
         templateGenerator.generateViews(domainClass, basedir)
@@ -95,8 +100,7 @@ def generateForDomainClass(domainClass) {
     if (generateController) {
         event("StatusUpdate", ["Generating controller for domain class ${domainClass.fullName}"])
         templateGenerator.generateController(domainClass, basedir)
-        createUnitTest(name: domainClass.fullName, suffix: "Controller",
-                superClass: "ControllerUnitTestCase")
+        templateGenerator.generateTest(domainClass, "${basedir}/test/unit")
         event("GenerateControllerEnd", [domainClass.fullName])
     }
 }

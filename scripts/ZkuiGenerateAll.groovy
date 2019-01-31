@@ -22,6 +22,7 @@
  * @since 0.4
  */
 
+includeTargets << new File(scaffoldingPluginDir, 'scripts/_GrailsGenerate.groovy')
 includeTargets << grailsScript("_GrailsCreateArtifacts")
 includeTargets << new File("${zkuiPluginDir}/scripts/_ZkuiGenerate.groovy")
 
