@@ -4,23 +4,23 @@ import groovy.text.SimpleTemplateEngine
 import groovy.text.Template
 import org.apache.commons.logging.Log
 import org.apache.commons.logging.LogFactory
-import org.codehaus.groovy.grails.cli.CommandLineHelper
-import org.codehaus.groovy.grails.commons.GrailsDomainClass
-import org.codehaus.groovy.grails.scaffolding.DomainClassPropertyComparator
-import org.codehaus.groovy.grails.scaffolding.GrailsTemplateGenerator
-import org.codehaus.groovy.grails.scaffolding.SimpleDomainClassPropertyComparator
+import org.codehaus.groovy.grails.commons.GrailsApplication
 import org.springframework.context.ResourceLoaderAware
 import org.springframework.core.io.FileSystemResource
 import org.springframework.core.io.ResourceLoader
 import org.springframework.core.io.support.PathMatchingResourcePatternResolver
 import org.springframework.util.Assert
-import org.codehaus.groovy.grails.commons.GrailsApplication
-import org.codehaus.groovy.grails.plugins.PluginManagerAware
+
+import org.codehaus.groovy.grails.commons.GrailsDomainClass
+import org.codehaus.groovy.grails.commons.GrailsDomainClassProperty
 import org.codehaus.groovy.grails.plugins.GrailsPluginManager
+import org.codehaus.groovy.grails.validation.DomainClassPropertyComparator
+import org.codehaus.groovy.grails.scaffolding.AbstractGrailsTemplateGenerator
+import org.codehaus.groovy.grails.scaffolding.SimpleDomainClassPropertyComparator
 
-class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoaderAware, PluginManagerAware {
+class ZkGrailsTemplateGenerator extends AbstractGrailsTemplateGenerator {
     static final Log LOG = LogFactory.getLog(ZkGrailsTemplateGenerator)
-
+    
     String basedir = "."
     File zkuiPluginDir
     boolean overwrite = false
@@ -35,7 +35,7 @@ class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoad
      * Used by the scripts so that they can pass in their AntBuilder instance.
      */
     ZkGrailsTemplateGenerator(ClassLoader classLoader) {
-        engine = new SimpleTemplateEngine(classLoader)
+        super(classLoader)
     }
 
     /**
@@ -66,20 +66,21 @@ class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoad
     def renderEditor = { property ->
         def domainClass = property.domainClass
         def cp
-        if (pluginManager.hasGrailsPlugin('hibernate')) {
+        if (pluginManager?.hasGrailsPlugin('hibernate') || pluginManager?.hasGrailsPlugin('hibernate4')) {
             cp = domainClass.constrainedProperties[property.name]
         }
 
         if (!renderEditorTemplate) {
             // create template once for performance
-            def templateText = getTemplateText("renderEditor.template")
-            renderEditorTemplate = engine.createTemplate(templateText)
+            renderEditorTemplate = engine.createTemplate(getTemplateText('renderEditor.template'))
         }
 
-        def binding = [property: property,
-                domainClass: domainClass,
-                cp: cp,
-                domainInstance: getPropertyName(domainClass)]
+        def binding = [
+            pluginManager: pluginManager,
+            property: property,
+            domainClass: domainClass,
+            cp: cp,
+            domainInstance: getPropertyName(domainClass)]
         return renderEditorTemplate.make(binding).toString()
     }
 
@@ -160,15 +161,16 @@ class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoad
         def t = engine.createTemplate(templateText)
         def multiPart = domainClass.properties.find {it.type == ([] as Byte[]).class || it.type == ([] as byte[]).class}
 
-        boolean hasHibernate = pluginManager.hasGrailsPlugin('hibernate')
+        boolean hasHibernate = pluginManager?.hasGrailsPlugin('hibernate') || pluginManager?.hasGrailsPlugin('hibernate4')
         def packageName = domainClass.packageName ? "${domainClass.packageName}.${domainClass.propertyName.toLowerCase()}" : ""
         def binding = [packageName: packageName,
-                domainClass: domainClass,
-                multiPart: multiPart,
-                className: domainClass.shortName,
-                propertyName: getPropertyName(domainClass),
-                renderEditor: renderEditor,
-                comparator: hasHibernate ? DomainClassPropertyComparator : SimpleDomainClassPropertyComparator]
+            pluginManager: pluginManager,
+            domainClass: domainClass,
+            multiPart: multiPart,
+            className: domainClass.shortName,
+            propertyName: getPropertyName(domainClass),
+            renderEditor: renderEditor,
+            comparator: hasHibernate ? DomainClassPropertyComparator : SimpleDomainClassPropertyComparator]
 
         t.make(binding).writeTo(out)
     }
@@ -229,15 +231,16 @@ class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoad
         def t = engine.createTemplate(templateText)
         def multiPart = domainClass.properties.find {it.type == ([] as Byte[]).class || it.type == ([] as byte[]).class}
 
-        boolean hasHibernate = pluginManager.hasGrailsPlugin('hibernate')
+        boolean hasHibernate = pluginManager?.hasGrailsPlugin('hibernate') || pluginManager?.hasGrailsPlugin('hibernate4')
         def packageName = domainClass.packageName ? "<%@ page import=\"${domainClass.fullName}\" %>" : ""
         def binding = [packageName: packageName,
-                domainClass: domainClass,
-                multiPart: multiPart,
-                className: domainClass.shortName,
-                propertyName: getPropertyName(domainClass),
-                renderEditor: renderEditor,
-                comparator: hasHibernate ? DomainClassPropertyComparator : SimpleDomainClassPropertyComparator]
+            pluginManager: pluginManager,
+            domainClass: domainClass,
+            multiPart: multiPart,
+            className: domainClass.shortName,
+            propertyName: getPropertyName(domainClass),
+            renderEditor: renderEditor,
+            comparator: hasHibernate ? DomainClassPropertyComparator : SimpleDomainClassPropertyComparator]
 
         t.make(binding).writeTo(out)
     }
@@ -245,25 +248,28 @@ class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoad
     void generateController(GrailsDomainClass domainClass, Writer out) {
         def templateText = getTemplateText("Controller.groovy")
 
-        boolean hasHibernate = pluginManager.hasGrailsPlugin('hibernate')
+        boolean hasHibernate = pluginManager?.hasGrailsPlugin('hibernate') || pluginManager?.hasGrailsPlugin('hibernate4')
         def binding = [packageName: domainClass.packageName,
-                domainClass: domainClass,
-                className: domainClass.shortName,
-                propertyName: getPropertyName(domainClass),
-                comparator: hasHibernate ? DomainClassPropertyComparator : SimpleDomainClassPropertyComparator]
+            pluginManager: pluginManager,
+            domainClass: domainClass,
+            className: domainClass.shortName,
+            propertyName: getPropertyName(domainClass),
+            comparator: hasHibernate ? DomainClassPropertyComparator : SimpleDomainClassPropertyComparator]
 
         def t = engine.createTemplate(templateText)
         t.make(binding).writeTo(out)
     }
 
-    private String getPropertyName(GrailsDomainClass domainClass) { "${domainClass.propertyName}${domainSuffix}" }
+    //private String getPropertyName(GrailsDomainClass domainClass) { "${domainClass.propertyName}${domainSuffix}" }
+    String getPropertyName(GrailsDomainClass domainClass) { "${domainClass.propertyName}${domainSuffix}" }
 
-    private helper = new CommandLineHelper()
+    //private helper = new CommandLineHelper()
 
     private canWrite(testFile) {
         if (!overwrite && testFile.exists()) {
             try {
-                def response = helper.userInput("File ${testFile} already exists. Overwrite?", ['y', 'n', 'a'] as String[])
+                //def response = helper.userInput("File ${testFile} already exists. Overwrite?", ['y', 'n', 'a'] as String[])
+                def response = GrailsConsole.getInstance().userInput("File ${testFile} already exists. Overwrite?", ['y', 'n', 'a'] as String[])
                 overwrite = overwrite || response == "a"
                 return overwrite || response == "y"
             }
@@ -275,7 +281,8 @@ class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoad
         return true
     }
 
-    private getTemplateText(String template) {
+    //private getTemplateText(String template) {
+    protected String getTemplateText(String template) {        
         def application = grailsApplication
         // first check for presence of template in application
         if (resourceLoader && application?.warDeployed) {
@@ -304,7 +311,8 @@ class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoad
         return resources
     }
 
-    def getTemplateNames() {
+    //def getTemplateNames() {
+    Set<String> getTemplateNames() {
         Closure filter = { it[0..-5] }
         if (resourceLoader && application?.isWarDeployed()) {
             def resolver = new PathMatchingResourcePatternResolver(resourceLoader)
@@ -349,6 +357,15 @@ class ZkGrailsTemplateGenerator implements GrailsTemplateGenerator, ResourceLoad
     }
 
     void generateTest(GrailsDomainClass domainClass, String destDir) throws IOException {
+        //do nothing
+    }
+    
+    // Lines below are contribution by amrc
+    void generateRestfulController(GrailsDomainClass domainClass, String destDir){
+        //do nothing
+    }
+	
+    void generateRestfulTest(GrailsDomainClass domainClass, String destDir){
         //do nothing
     }
 }
