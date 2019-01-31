@@ -19,7 +19,7 @@ class SelectTagLib {
         def optionKey = attrs.remove('optionKey')
         def optionValue = attrs.remove('optionValue')
         def value = attrs.remove('value')
-        if (value instanceof Collection && attrs.multiple == null) {
+        if (value instanceof Collection && attrs.multiple == null && attrs.mold != 'select') {
             attrs.multiple = true
         }
         if (value instanceof StreamCharBuffer) {
@@ -92,19 +92,29 @@ class SelectTagLib {
             }
             modelList << new ItemObject(labelBuilder.toString(), keyValue, selected)
         }
-        if (attrs.multiple && attrs.multiple != 'false') {
-            attrs.width = attrs.width ?: "200px"
+        
+        if (attrs.mold && attrs.mold == 'select') {
+                if (noSelection != null) {
+                    def noSelectionKey = noSelection.key
+                    def noSelectionValue = noSelection.value
+                    modelList.add(0, new ItemObject(noSelectionValue, noSelectionKey, true))
+                }
             z.listbox([model: new ListModelList(modelList), itemRenderer: new SelectListitemRenderer()] + attrs)
-        } else {
-            if (selectedIndex != null) {
-                attrs.onCreate = "self.selectedIndex = ${selectedIndex}".toString()
-            } else if (noSelection != null) {
-                def noSelectionKey = noSelection.key
-                def noSelectionValue = noSelection.value
-                modelList.add(0, new ItemObject(noSelectionValue, noSelectionKey))
-                attrs.onCreate = "self.selectedIndex = 0"
+        }else{
+            if (attrs.multiple && attrs.multiple != 'false') {
+                attrs.width = attrs.width ?: "200px"
+                z.listbox([model: new ListModelList(modelList), itemRenderer: new SelectListitemRenderer()] + attrs)
+            } else {
+                if (selectedIndex != null) {
+                    attrs.onCreate = "self.selectedIndex = ${selectedIndex}".toString()
+                } else if (noSelection != null) {
+                    def noSelectionKey = noSelection.key
+                    def noSelectionValue = noSelection.value
+                    modelList.add(0, new ItemObject(noSelectionValue, noSelectionKey))
+                    attrs.onCreate = "self.selectedIndex = 0"
+                }
+                z.combobox([model: new ListModelList(modelList), itemRenderer: new SelectComboitemRenderer(), readonly: true] + attrs)
             }
-            z.combobox([model: new ListModelList(modelList), itemRenderer: new SelectComboitemRenderer(), readonly: true] + attrs)
         }
         return
     }
