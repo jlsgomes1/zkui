@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <zk>
+
     <listener>
         <description>ThreadLocal Synchronization Listener</description>
         <listener-class>org.zkoss.zkplus.util.ThreadLocalListener</listener-class>
@@ -13,6 +14,7 @@
             org.springframework.web.context.request.RequestContextHolder=requestAttributesHolder,inheritableRequestAttributesHolder;
         </value>
     </preference>
+   <!--
     <library-property>
         <name>org.zkoss.zul.theme.fontSizeM</name>
         <value>12px</value>
@@ -24,5 +26,16 @@
     <library-property>
         <name>org.zkoss.zul.theme.fontSizeS</name>
         <value>12px</value>
+    </library-property>-->
+    <library-property>
+        <name>org.zkoss.theme.preferred</name>
+        <value>sapphire</value>
+    </library-property>
+    <system-config>
+        <disable-event-thread>false</disable-event-thread>
+    </system-config>
+     <library-property>
+        <name>org.zkoss.zul.progressbox.position</name>
+        <value>center</value>
     </library-property>
 </zk>
