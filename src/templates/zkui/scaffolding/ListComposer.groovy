@@ -1,6 +1,7 @@
 <% import grails.persistence.Event %><%=packageName ? "package ${packageName}\n\n" : ''%>import org.zkoss.zk.ui.Component
 import org.zkoss.zul.*
 import org.zkoss.zk.ui.event.*
+import org.grails.plugins.zkui.util.ZkThemeManager // for usage example only
 import ${domainClass.fullName}
 
 class ListComposer {
@@ -8,6 +9,7 @@ class ListComposer {
     ListModelList listModel = new ListModelList()
     Paging paging
     Longbox idLongbox
+    Listbox themeName
 
     def afterCompose = {Component comp ->
         grid.setRowRenderer(rowRenderer as RowRenderer)
@@ -46,15 +48,23 @@ class ListComposer {
                     props = domainClass.properties.findAll { allowedNames.contains(it.name) && !excludedProps.contains(it.name) && !Collection.isAssignableFrom(it.type) }
                     Collections.sort(props, comparator.constructors[0].newInstance([domainClass] as Object[]))
                     props.eachWithIndex { p, i ->
-                        if (i == 0) {%>a(href: g.createLink(controller:"${domainClass.propertyName}",action:'edit',id:id), label: ${propertyName}.id)
+                        if (i == 0) {%>a(href: g.createLink(controller:"${domainClass.propertyName}",action:"edit",id:id), label: ${propertyName}.id)
                 <%}else if (i < 6) {%>label(value: ${propertyName}.${p.name})
                 <%}   } %>hlayout{
-                    toolbarbutton(label: g.message(code: 'default.button.edit.label', default: 'Edit'),image:'/images/skin/database_edit.png',href:g.createLink(controller: "${domainClass.propertyName}", action: 'edit', id: id))
-                    toolbarbutton(label: g.message(code: 'default.button.delete.label', default: 'Delete'), image: "/images/skin/database_delete.png", client_onClick: "if(!confirm('\${g.message(code: 'default.button.delete.confirm.message', default: 'Are you sure?')}'))event.stop()", onClick: {
-                        ${className}.get(id).delete(flush: true)
-                        listModel.remove(id)
+                    toolbarbutton(label: g.message(code: "default.button.edit.label", default: "Edit"),image:g.assetPath(src:"/skin/database_edit.png"),href:g.createLink(controller: "${domainClass.propertyName}", action: 'edit', id: id))
+                    toolbarbutton(label: g.message(code: "default.button.delete.label", default: "Delete"), image:g.assetPath(src:"/skin/database_delete.png"),  onClick: {
+                        if (Messagebox.show(g.message(code: 'default.button.delete.confirm.message', default: 'Are you sure?'), g.message(code: 'default.button.delete.label', default: 'Delete') + " ${domainClass.propertyName} " + id , Messagebox.YES | Messagebox.NO, Messagebox.QUESTION) == Messagebox.YES){
+                            ${className}.get(id).delete(flush: true)
+                            listModel.remove(id)
+                        }
                     })
                 }
         }
+    }
+    
+    // Usage example for switching themes
+    void onSelect_themeName(Event e){
+        def themeManager = new ZkThemeManager()
+        themeManager.switchTheme(themeName.selectedItem.value.toString())
     }
 }

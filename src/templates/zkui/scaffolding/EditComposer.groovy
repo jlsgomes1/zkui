@@ -23,7 +23,7 @@ class EditComposer {
             }
             ${propertyName}.properties = params
             if (!${propertyName}.hasErrors() && ${propertyName}.save(flush: true)) {
-                flash.message = g.message(code: 'default.updated.message', args: [g.message(code: '${domainClass.propertyName}.label', default: '${className}'), ${propertyName}.id])
+                flash.message = g.message(code: "default.updated.message", args: [g.message(code: "${domainClass.propertyName}.label", default: '${className}'), ${propertyName}.id])
                 redirect(controller: "${domainClass.propertyName}", action: "edit", id: ${propertyName}.id)
             }else {
                 log.error ${propertyName}.errors
@@ -31,9 +31,8 @@ class EditComposer {
             }
         }
         else {
-            flash.message = g.message(code: 'default.not.found.message', args: [g.message(code: '${domainClass.propertyName}.label', default: '${className}'), params.id])
+            flash.message = g.message(code: "default.not.found.message", args: [g.message(code: "${domainClass.propertyName}.label", default: '${className}'), params.id])
             redirect(controller: "${domainClass.propertyName}",action: "list")
         }
-
     }
 }

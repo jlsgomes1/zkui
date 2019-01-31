@@ -28,24 +28,24 @@
         out << renderOneToMany(domainClass, property)
 
     private renderEnumEditor(domainClass, property) {
-        return "<zkui:select name=\"${property.name}\" from=\"\${${property.type.name}?.values()}\" keys=\"\${${property.type.name}?.values()*.name()}\" value=\"\${${domainInstance}?.${property.name}?.name()}\" ${renderNoSelection(property)} />"
+        return "<zkui:select id=\"${property.name}\" name=\"${property.name}\" from=\"\${${property.type.name}?.values()}\" keys=\"\${${property.type.name}?.values()*.name()}\" value=\"\${${domainInstance}?.${property.name}?.name()}\" ${renderNoSelection(property)} />"
     }
 
     private renderStringEditor(domainClass, property) {
         if (!cp) {
-            return "<z:textbox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
+            return "<z:textbox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
         }
         else {
             if ("textarea" == cp.widget || (cp.maxSize > 250 && !cp.password && !cp.inList)) {
-                return "<z:textbox name=\"${property.name}\" rows=\"5\" value=\"\${${domainInstance}?.${property.name}}\" />"
+                return "<z:textbox id=\"${property.name}\" name=\"${property.name}\" hflex=\"1\" rows=\"5\" value=\"\${${domainInstance}?.${property.name}}\" />"
             }
             else {
                 if (cp.inList) {
-                    return "<zkui:select name=\"${property.name}\" from=\"\${${domainInstance}.constraints.${property.name}.inList}\" value=\"\${${domainInstance}?.${property.name}}\" valueMessagePrefix=\"${domainClass.propertyName}.${property?.name}\" ${renderNoSelection(property)} />"
+                    return "<zkui:select id=\"${property.name}\" name=\"${property.name}\" from=\"\${${domainInstance}.constraints.${property.name}.inList}\" value=\"\${${domainInstance}?.${property.name}}\" valueMessagePrefix=\"${domainClass.propertyName}.${property?.name}\" ${renderNoSelection(property)} />"
                 }
                 else {
                     def sb = new StringBuffer("<z:textbox ")
-                    sb << "name=\"${property.name}\" "
+                    sb << "id=\"${property.name}\" name=\"${property.name}\" "
                     cp.password ? sb << "type=\"password\" " : sb << ""
                     if (cp.maxSize) sb << "maxlength=\"${cp.maxSize}\" "
                     if (!cp.editable) sb << "readonly=\"true\" />"
@@ -62,12 +62,12 @@
 
     private renderManyToOne(domainClass,property) {
         if (property.association) {
-            return "<zkui:select name=\"${property.name}.id\" from=\"\${${property.type.name}.list()}\" optionKey=\"id\" value=\"\${${domainInstance}?.${property.name}?.id}\" ${renderNoSelection(property)} />"
+            return "<zkui:select id=\"${property.name}\" name=\"${property.name}.id\" from=\"\${${property.type.name}.list()}\" optionKey=\"id\" value=\"\${${domainInstance}?.${property.name}?.id}\" ${renderNoSelection(property)} />"
         }
     }
 
     private renderManyToMany(domainClass, property) {
-        return "<zkui:select name=\"${property.name}\" from=\"\${${property.referencedDomainClass.fullName}.list()}\" multiple=\"true\" checkmark=\"true\" optionKey=\"id\" height=\"250px\" value=\"\${${domainInstance}?.${property.name}*.id}\" />"
+        return "<zkui:select id=\"${property.name}\" name=\"${property.name}\" from=\"\${${property.referencedDomainClass.fullName}.list()}\" multiple=\"true\" checkmark=\"true\" optionKey=\"id\" height=\"250px\" value=\"\${${domainInstance}?.${property.name}*.id}\" />"
     }
 
     private renderOneToMany(domainClass, property) {
@@ -80,7 +80,7 @@
         pw.println "        <li><g:link controller=\"${property.referencedDomainClass.propertyName}\" action=\"edit\" id=\"\${${property.name[0]}.id}\">\${${property.name[0]}?.encodeAsHTML()}</g:link></li>"
         pw.println "    </g:each>"
         pw.println "    </ul>"
-        pw.println "    <z:toolbarbutton href=\"\${createLink(controller:'${property.referencedDomainClass.propertyName}',action:'create',params:['${domainClass.propertyName}.id': ${domainInstance}?.id])}\" image=\"\${resource(dir:'images/skin',file:'database_add.png')}\" label=\"\${message(code: 'default.add.label', args: [message(code: '${property.referencedDomainClass.propertyName}.label', default: '${property.referencedDomainClass.shortName}')])}\"/>"
+        pw.println "    <z:toolbarbutton href=\"\${createLink(controller:'${property.referencedDomainClass.propertyName}',action:'create',params:['${domainClass.propertyName}.id': ${domainInstance}?.id])}\" image=\"\${assetPath(src: 'database_add.png')}\" label=\"\${g.message(code: 'default.add.label', args: [g.message(code: '${property.referencedDomainClass.propertyName}.label', default: '${property.referencedDomainClass.shortName}')])}\"/>"
         pw.println "</z:vlayout>"
         return sw.toString()
     }
@@ -88,44 +88,44 @@
     private renderNumberEditor(domainClass, property) {
         if (!cp) {
             if (property.type == Byte.class) {
-                return "<zkui:select name=\"${property.name}\" from=\"\${-128..127}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" />"
+                return "<zkui:select id=\"${property.name}\" name=\"${property.name}\" from=\"\${-128..127}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" />"
             }else if(property.type== Integer.class){
-                return "<z:intbox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
+                return "<z:intbox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
             }else if(property.type== Long.class){
-                return "<z:longbox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
+                return "<z:longbox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
             }else if(property.type== Double.class){
-                return "<z:doublebox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
+                return "<z:doublebox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
             }
             else {
-                return "<z:textbox name=\"${property.name}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" />"
+                return "<z:textbox id=\"${property.name}\" name=\"${property.name}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" />"
             }
         }
         else {
             if (cp.range) {
-                return "<zkui:select name=\"${property.name}\" from=\"\${${cp.range.from}..${cp.range.to}}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" ${renderNoSelection(property)} />"
+                return "<zkui:select id=\"${property.name}\" name=\"${property.name}\" from=\"\${${cp.range.from}..${cp.range.to}}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" ${renderNoSelection(property)} />"
             }
             else if (cp.inList) {
-                return "<zkui:select name=\"${property.name}\" from=\"\${${domainInstance}.constraints.${property.name}.inList}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" valueMessagePrefix=\"${domainClass.propertyName}.${property?.name}\" ${renderNoSelection(property)} />"
+                return "<zkui:select id=\"${property.name}\" name=\"${property.name}\" from=\"\${${domainInstance}.constraints.${property.name}.inList}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" valueMessagePrefix=\"${domainClass.propertyName}.${property?.name}\" ${renderNoSelection(property)} />"
             }            
             else {
                 if (property.type == Integer.class) {
-                    return "<z:intbox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
+                    return "<z:intbox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
                 } else if (property.type == Long.class) {
-                    return "<z:longbox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
+                    return "<z:longbox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
                 }else if (property.type == Double.class) {
-                    return "<z:doublebox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
+                    return "<z:doublebox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
                 }
-                return "<z:textbox name=\"${property.name}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" />"
+                return "<z:textbox id=\"${property.name}\" name=\"${property.name}\" value=\"\${fieldValue(bean: ${domainInstance}, field: '${property.name}')}\" />"
             }
         }
      }
 
     private renderBooleanEditor(domainClass, property) {
         if (!cp) {
-            return "<z:checkbox name=\"${property.name}\" checked=\"\${${domainInstance}?.${property.name}}\"/>"
+            return "<z:checkbox id=\"${property.name}\" name=\"${property.name}\" checked=\"\${${domainInstance}?.${property.name}}\"/>"
         }
         else {
-            def sb = new StringBuffer("<z:checkbox name=\"${property.name}\" checked=\"\${${domainInstance}?.${property.name}}\"")
+            def sb = new StringBuffer("<z:checkbox id=\"${property.name}\" name=\"${property.name}\" checked=\"\${${domainInstance}?.${property.name}}\"")
             cp.attributes.each { k, v ->
                 sb << "${k}=\"${v}\" "
             }
@@ -137,14 +137,14 @@
     private renderDateEditor(domainClass, property) {
         def precision = (property.type == Date.class || property.type == java.sql.Date.class || property.type == Calendar.class) ? "day" : "minute";
         if (!cp) {
-            return precision == 'day' ? "<z:datebox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>" : "<z:timebox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
+            return precision == 'day' ? "<z:datebox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>" : "<z:timebox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"/>"
         }
         else {
             if (!cp.editable) {
                 return "\${${domainInstance}?.${property.name}?.toString()}"
             }
             else {
-                def sb = new StringBuffer("<z:datebox name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"")
+                def sb = new StringBuffer("<z:datebox id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\"")
                 if (cp.format) sb << "format=\"${cp.format}\" "
                 cp.attributes.each { k, v ->
                     sb << "${k}=\"${v}\" "
@@ -157,10 +157,10 @@
 
     private renderSelectTypeEditor(type, domainClass,property) {
         if (!cp) {
-            return "<g:${type}Select name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\" />"
+            return "<g:${type}Select id=\"${property.name}\" name=\"${property.name}\" value=\"\${${domainInstance}?.${property.name}}\" />"
         }
         else {
-            def sb = new StringBuffer("<g:${type}Select name=\"${property.name}\" ")
+            def sb = new StringBuffer("<g:${type}Select id=\"${property.name}\" name=\"${property.name}\" ")
             if (cp.widget) sb << "widget=\"${cp.widget}\" ";
             cp.attributes.each { k, v ->
                 sb << "${k}=\"${v}\" "
@@ -183,5 +183,5 @@
             }
         }
         return ""
-    }
+    } 
 %>
