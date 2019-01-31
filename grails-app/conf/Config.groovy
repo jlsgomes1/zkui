@@ -27,7 +27,7 @@ grails.views.default.codec="none" // none, html, base64
 grails.views.gsp.encoding="UTF-8"
 
 grails.doc.title = "Grails ZK UI Plugin"
-grails.doc.authors = "groovyquan"
+grails.doc.authors = "groovyquan, nashtsai, jlsgomes"
 grails.doc.license = "GNU Free Documentation License"
 grails.doc.copyright = "This document is licensed under GNU Free Documentation License,ZK UI Plugin is released under LGPL"
 grails.doc.footer = "Grails ZK UI Plugin Project"
