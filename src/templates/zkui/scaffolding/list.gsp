@@ -14,7 +14,6 @@
                 <z:space/>
                 <z:button id="searchButton" label="\${message(code:'search')}"/>
                 <z:space/>
-                <%-- Example for dynamic theme switch. The themes libraries (sapphire.jar, iceblue.jar, etc.) should be in the lib folder --%>
                 <z:label value="\${message(code:'default.theme.label',default:'theme')}"/>
                     <z:listbox id="themeName"  mold="select">
                         <z:listitem value="" selected="true">
@@ -36,7 +35,6 @@
                             <z:listcell label="silvertail"/>
                         </z:listitem>
                     </z:listbox>
-                  <%-- end of example  --%>
             </z:hlayout>
             <g:if test="\${flash.message}">
                 <z:window mode="popup" border="normal">
